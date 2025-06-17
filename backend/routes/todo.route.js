@@ -1,22 +1,27 @@
 import express from "express";
 import Todo from "../models/todo.model.js";
+import { protect } from "../middleware/auth.js";
+
 
 const router = express.Router();
 
-// Get all todos
-router.get("/", async (req, res) => {
+
+router.get("/", protect, async (req, res) => {
   try {
-    const todos = await Todo.find();
+    const todos = await Todo.find({ user: req.user.id }).sort({ deadline: 1 });
     res.json(todos);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// Add a new todo
-router.post("/", async (req, res) => {
+
+// Add 
+router.post("/", protect, async (req, res) => {
   const todo = new Todo({
     text: req.body.text,
+    deadline: req.body.deadline,
+    user: req.user.id,
   });
   try {
     const newTodo = await todo.save();
@@ -26,10 +31,11 @@ router.post("/", async (req, res) => {
   }
 });
 
-// Update a todo (text and/or completed)
-router.patch("/:id", async (req, res) => {
+
+// Update 
+router.patch("/:id", protect, async (req, res) => {
   try {
-    const todo = await Todo.findById(req.params.id);
+    const todo = await Todo.findOne({ _id: req.params.id, user: req.user.id });
     if (!todo) return res.status(404).json({ message: "Todo not found" });
 
     if (req.body.text !== undefined) {
@@ -46,14 +52,17 @@ router.patch("/:id", async (req, res) => {
   }
 });
 
-// Delete a todo
-router.delete("/:id", async (req, res) => {
+
+// Delete 
+router.delete("/:id", protect, async (req, res) => {
   try {
-    await Todo.findByIdAndDelete(req.params.id);
+    const todo = await Todo.findOneAndDelete({ _id: req.params.id, user: req.user.id });
+    if (!todo) return res.status(404).json({ message: "Todo not found or unauthorized" });
     res.json({ message: "Todo deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 export default router;

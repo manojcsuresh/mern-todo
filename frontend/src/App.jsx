@@ -5,33 +5,47 @@ import { MdModeEditOutline } from "react-icons/md";
 import { FaTrash } from "react-icons/fa6";
 import { IoClipboardOutline } from "react-icons/io5";
 import axios from "axios";
+import Auth from "./auth";
 function App() {
   const [newTodo, setNewTodo] = useState("");
   const [todos, setTodos] = useState([]);
   const [editingTodo, setEditingTodo] = useState(null);
   const [editedText, setEditedText] = useState("");
+  const [deadline, setDeadline] = useState("");
 
-  const addTodo = async (e) => {
-    e.preventDefault();
-    if (!newTodo.trim()) return;
-    try {
-      const response = await axios.post("/api/todos", { text: newTodo });
-      setTodos([...todos, response.data]);
-      setNewTodo("");
-    } catch (error) {
-      console.log("Error adding todo:", error);
-    }
-  };
+ if (!localStorage.getItem("token")) {
+    return <Auth onAuthSuccess={() => window.location.reload()} />;
+  }
+
+  axios.defaults.headers.common["Authorization"] = `Bearer ${localStorage.getItem("token")}`;
+
+ const addTodo = async (e) => {
+  e.preventDefault();
+  if (!newTodo.trim()) return;
+  try {
+    const response = await axios.post("/api/todos", { text: newTodo, deadline });
+    setTodos([...todos, response.data]);
+    setNewTodo("");
+    setDeadline(""); // 👈 clear deadline input
+  } catch (error) {
+    console.log("Error adding todo:", error);
+  }
+};
+
 
   const fetchTodos = async () => {
-    try {
-      const response = await axios.get("/api/todos");
-      console.log(response.data);
-      setTodos(response.data);
-    } catch (error) {
-      console.log("Error fetching todos:", error);
-    }
-  };
+  try {
+    const response = await axios.get("/api/todos");
+    const sorted = response.data.sort((a, b) => {
+      const dateA = new Date(a.deadline || Infinity);
+      const dateB = new Date(b.deadline || Infinity);
+      return dateA - dateB;
+    });
+    setTodos(sorted);
+  } catch (error) {
+    console.log("Error fetching todos:", error);
+  }
+};
 
   useEffect(() => {
     fetchTodos();
@@ -78,29 +92,52 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-br from gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8">
+        <div className="flex justify-between items-center mb-4">
+  <span className="text-lg font-medium text-gray-700">Welcome!</span>
+  <button
+    onClick={() => {
+      localStorage.removeItem("token");
+      window.location.reload();
+    }}
+    className="text-sm text-red-500 hover:underline"
+  >
+    Logout
+  </button>
+</div>
+
         <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">
-          Task Manager
+          ToDo App
         </h1>
 
         <form
-          onSubmit={addTodo}
-          className="flex items-center gap-2 shadow-sm border border-gray-200 p-2 rounded-lg"
-        >
-          <input
-            className="flex-1 outline-none px-3 py-2 text-gray-700 placeholder-gray-400"
-            type="text"
-            value={newTodo}
-            onChange={(e) => setNewTodo(e.target.value)}
-            placeholder="What needs to be done?"
-            required
-          />
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium cursor-pointer"
-          >
-            Add Task
-          </button>
-        </form>
+  onSubmit={addTodo}
+  className="flex flex-col gap-3 shadow-sm border border-gray-200 p-4 rounded-lg"
+>
+  <input
+    className="w-full outline-none px-3 py-2 text-gray-700 placeholder-gray-400 border border-gray-200 rounded-lg"
+    type="text"
+    value={newTodo}
+    onChange={(e) => setNewTodo(e.target.value)}
+    placeholder="What needs to be done?"
+    required
+  />
+
+  <input
+    type="datetime-local"
+    value={deadline}
+    onChange={(e) => setDeadline(e.target.value)}
+    className="w-full outline-none px-3 py-2 border border-gray-200 rounded-lg text-gray-700"
+  />
+
+  <button
+    type="submit"
+    className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium cursor-pointer"
+  >
+    Add Task
+  </button>
+</form>
+
+
         <div className="mt-4">
           {todos.length === 0 ? (
             <div></div>
@@ -145,9 +182,17 @@ function App() {
                           >
                             {todo.completed && <MdOutlineDone />}
                           </button>
-                          <span className="text-gray-800 truncate font-medium">
+                          {/* <span className="text-gray-800 truncate font-medium">
                             {todo.text}
-                          </span>
+                          </span> */}
+                          <div>
+                              <p className="text-gray-800 truncate font-medium">{todo.text}</p>
+                                    {todo.deadline && (
+                                    <p className="text-sm text-gray-500">
+                                      Deadline: {new Date(todo.deadline).toLocaleString()}
+                                    </p>
+                                 )}
+                          </div>
                         </div>
                         <div className="flex gap-x-2">
                           <button

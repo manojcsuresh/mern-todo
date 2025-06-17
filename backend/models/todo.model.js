@@ -10,6 +10,16 @@ const todoSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    deadline: {
+      type: Date,
+      required: false,
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+},
+
   },
   { timestamps: true }
 );
