@@ -19,7 +19,7 @@ dotenv.config();
 
 app.use(express.json());
 app.use(cors({
-  origin: "https://spectacular-bunny-4f1240.netlify.app/", // ✅ exact Netlify URL
+  origin: "https://spectacular-bunny-4f1240.netlify.app", // ✅ exact Netlify URL
   credentials: true
 }));
 
